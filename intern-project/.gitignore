@@ -1,0 +1,22 @@
+# Secrets and local runtime artifacts (never commit these)
+.env
+*.db
+*.sqlite3
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Caches and tool state
+.pytest_cache/
+.mimosa/
+
+# Virtual environments
+.venv/
+venv/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+__MACOSX/
+*.log

@@ -1,0 +1,46 @@
+# ============================================================
+# Repository root .gitignore - AI-Support-Ticket-Assistant
+# Application source lives in intern-project/ (see intern-project/.gitignore)
+# ============================================================
+
+# --- Internal planning / handover documents (author-only; not part of the delivery) ---
+PRD.md
+TRD.md
+schemaDB.md
+refrence.md
+archetecture.md
+request-flow.md
+plan.md
+phases.md
+memory.md
+high-level diagram.md
+low level-diagram.md
+handover-prompt.md
+handover-reviewer.md
+handover-bugfixer.md
+
+# --- Supplied archive and macOS archive metadata ---
+candidate_pack.zip
+*.zip
+__MACOSX/
+.DS_Store
+
+# --- Local tool / agent state ---
+.mimosa/
+.kilo/
+
+# --- Python, test and virtualenv artifacts (matched at any depth) ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# --- Secrets and local runtime databases (defence in depth) ---
+.env
+*.db
+*.sqlite3
+
+# --- OS / editor junk ---
+Thumbs.db
+*.log
