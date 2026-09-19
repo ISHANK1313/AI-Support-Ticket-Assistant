@@ -1,0 +1,11 @@
+# Keep line endings consistent for a Windows-and-Linux friendly repository.
+* text=auto eol=lf
+
+# Local database artifacts are binary and must never be converted.
+*.db binary
+*.sqlite3 binary
+
+# Images and archives are binary.
+*.png binary
+*.jpg binary
+*.zip binary
