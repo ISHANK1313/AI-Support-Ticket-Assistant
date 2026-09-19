@@ -4,9 +4,9 @@ A small FastAPI + Streamlit support-ticket recommendation application. An authen
 
 ## Current verification status
 
-On 2026-09-17, `python -m pytest -q` passed **75 offline tests** (fake providers, no key or network needed), covering auth/ownership, ticket persistence, retrieval index integrity, decision validation/repair, UI client, eval runner and schema guards.
+On 2026-09-19, `python -m pytest -q` (run from `intern-project` inside `.venv`, Python 3.11.9) passed **96 offline tests** with fake providers — no key or network needed — covering auth/ownership and every JWT rejection path, repository atomicity/rollback, ticket API round trip, retrieval index integrity, decision validation/repair, UI client, evaluator runner and schema guards.
 
-Live Gemini verification with the project's own configured key: ingestion succeeded (6 policy documents, 3072-dim vectors stored locally) and `python -m eval.run_eval --cases data/sample_test_cases.json` scored **total=5 correct=5 incorrect=0 errors=0 accuracy=100.00%** after one prompt fix (prompt v2 clarifies that facts stated in the customer message count as known). The five visible cases are limited end-to-end checks, not proof of general accuracy; the optional `--csv` replay is a diagnostic of historical label agreement, not held-out accuracy. Live calls were also verified through the authenticated HTTP API (register/login + real decision round trip) using an isolated copy of the database.
+Live Gemini verification with the project's own configured key: ingestion succeeded (6 policy documents, 3072-dim vectors stored locally) and `python -m eval.run_eval --cases data/sample_test_cases.json` scored **total=5 correct=5 incorrect=0 errors=0 accuracy=100.00%** after one prompt fix (prompt v2 clarifies that facts stated in the customer message count as known). The five visible cases are limited end-to-end checks, not proof of general accuracy; the optional `--csv` replay is a diagnostic of historical label agreement, not held-out accuracy. Live calls were also verified through the authenticated HTTP API (register/login + real decision round trip) using an isolated copy of the database, and on 2026-09-19 through a manual browser walkthrough of the Streamlit UI against the running backend (register, sign in, submit a decision, read it back from History).
 
 ## Local setup (Python 3.11+)
 
@@ -38,7 +38,7 @@ Copy `.env.example` only when `.env` does not already exist. Edit `.env` locally
 
 - Set your own `GEMINI_API_KEY`; obtain it through Google AI Studio. Never paste keys into chat, source, screenshots or version control.
 - Generate a strong `JWT_SECRET`, for example using `python -c "import secrets; print(secrets.token_urlsafe(48))"`, and paste that value locally.
-- Review `GEMINI_MODEL` and `GEMINI_EMBEDDING_MODEL` in `.env.example`. Use supported model identifiers available to your account; this README deliberately does not assert a model version or live availability.
+- Review `GEMINI_MODEL` and `GEMINI_EMBEDDING_MODEL`. The `.env.example` defaults (`gemini-3.5-flash-lite` and `gemini-embedding-001`) were checked against the published Gemini API documentation on 2026-09-19. Availability is account- and date-dependent, so substitute an identifier your own account can use if a live run reports the model as unknown.
 - Review `DATABASE_PATH`, `KNOWLEDGE_BASE_PATH`, and `JWT_EXPIRE_MINUTES`. Relative backend paths resolve against the project root.
 
 The backend/evaluation `Settings.load()` reads `.env`. The UI **does not read `.env`, backend settings, the database, or Gemini credentials**. It reads only `API_BASE_URL` from its process environment, defaulting to `http://127.0.0.1:8000`. This URL is trusted operator configuration, not a customer input. Keep the local demo on loopback; use HTTPS and proper deployment controls before any remote use.

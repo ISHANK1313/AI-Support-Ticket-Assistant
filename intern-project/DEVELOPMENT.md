@@ -7,11 +7,12 @@ Working notes for this repository: architecture choices, verification state, kno
 Implemented and offline-tested in this work stream:
 
 - `streamlit_app.py`: Streamlit UI. Three areas (Account, New decision, History), HTTP-only via `src/ui_client.py`.
-- `src/ui_client.py`: session-bound client. Per-call Bearer headers, Decimal money serialization, explicit nulls, 130-second timeout, redirect/automatic-retry prevention, 401 token clearing, injectable transport. The live `requests` path was not exercised against a running server.
+- `src/ui_client.py`: session-bound client. Per-call Bearer headers, Decimal money serialization, explicit nulls, 160-second timeout, redirect/automatic-retry prevention, 401 token clearing, injectable transport. The live `requests` path was exercised against a running `uvicorn` server through the Streamlit UI on 2026-09-19.
 - `eval/run_eval.py`: `python -m eval.run_eval --cases data/sample_test_cases.json` or `--csv data/tickets.csv`. Lazily imports the backend and calls the real `DecisionService(Settings.load()).decide(TicketInput)`. An exact allowlist prevents labels/IDs/identity fields from entering inputs. Errors count toward the total denominator; accuracy is `correct/total`.
 - `tests/test_ui_client.py` and `tests/test_eval.py`: 17 offline tests. No keys, server, or database required.
+- `tests/test_auth.py` and `tests/test_database.py`: JWT rejection paths (expired, forged signature, `alg=none`, HS384, missing `sub`/`iat`/`exp`, non-numeric subject, deleted user, malformed header), owner-scoped repository reads, schema column guards, and ticket+decision atomicity with rollback on failure.
 
-Observed full-suite state (2026-09-17, `python -m pytest -q` from `intern-project`, global interpreter): collection was interrupted by **2 errors; no full-suite tests executed**. Both `tests/test_auth.py` and `tests/test_tickets.py` failed with `TypeError: Router.__init__() got an unexpected keyword argument 'on_startup'`, consistent with incompatible installed FastAPI/Starlette versions. An earlier collection attempt also found retrieval not yet present; that module now exists. These modules were not modified here. Run inside a clean virtual environment before judging integration. The end-to-end journey against a running API remains unverified.
+Integration state (2026-09-19): the complete offline suite runs and passes inside `intern-project/.venv` (Python 3.11.9, FastAPI 0.141.1, Starlette 1.6.0) — see the verification log below for the exact command and result. An earlier attempt with a globally installed interpreter reported `TypeError: Router.__init__() got an unexpected keyword argument 'on_startup'`; that was an incompatible global FastAPI/Starlette pairing, not an application defect, and it does not reproduce in a clean virtual environment. The end-to-end journey against a running API was exercised manually on 2026-09-19 through the Streamlit UI.
 
 ## Architecture and structure
 
@@ -31,7 +32,7 @@ Passwords are hashed with Argon2; raw hashes never appear in API responses. JWTs
 
 - A retry after an uncertain POST timeout can duplicate a saved ticket; idempotency keys are out of scope.
 - Semantic policy grounding is not provable; citation membership is necessary but insufficient.
-- The committed model names in `.env.example` are placeholders pending verification of currently supported identifiers; verify before first live run.
+- The `.env.example` model defaults were checked against the published Gemini API documentation on 2026-09-19 (`gemini-3.5-flash-lite` stable with structured-output support; `gemini-embedding-001` still available with task-type support). Availability is account- and date-dependent, so an unknown-model error on a live run means substituting an identifier the account can use.
 - No CI pipeline; tests are run manually.
 - `data/tickets.csv` label agreement is diagnostic only; some historical rows omit facts the policies require (for example, wrong-item identities) and some labels conflict with the written policies.
 - The evaluator's exit-code convention (1 on any error/mismatch) is convenient for scripted checks but means a single flaky provider call fails the run; rerun to confirm.
@@ -50,10 +51,14 @@ Documented interpretations implemented on the UI/eval side:
 
 ## Agent usage disclosure
 
-This work stream was produced with an AI coding agent under human direction. The agent read the parent planning documents, implemented the assigned UI/evaluation files with test-first verification, ran only the offline tests above, and did not run live Gemini calls, ingestion, the full journey, or any Git operation. Humans remain responsible for reviewing the code, verifying model identifiers, supplying local secrets, and running live evaluation. Other modules were built by separate agents working to the same contracts; integration responsibility is shared.
+This work stream was produced with AI coding agents under human direction. The agents read the parent planning documents, implemented the modules against the shared contracts, wrote tests first where possible, and ran only the offline suites recorded below. Live Gemini ingestion, the supplied-case evaluation and the manual browser walkthrough were performed separately by the human operator, and the repository was initialized, committed and pushed to GitHub on 2026-09-19 at the operator's explicit request. Humans remain responsible for reviewing the code, verifying model identifiers, supplying local secrets, and running live evaluation.
 
 ## Verification log
 
-- 2026-09-17: `python -m pytest tests/test_ui_client.py tests/test_eval.py -q` — 17 passed (offline, no keys; includes Streamlit AppTest session flow and evaluator CLI paths).
-- 2026-09-17: `python -m pytest -q` (full suite, global interpreter) — 13 passed, 2 collection errors (`test_retrieval.py` import: missing `src/retrieval.py`; `test_auth.py`: FastAPI/Starlette incompatibility `TypeError: Router.__init__() got an unexpected keyword argument 'on_startup'`). Retest inside a fresh virtualenv before judging application code.
-- Not yet run: live ingestion, `python -m eval.run_eval --cases data/sample_test_cases.json` against real Gemini, browser/manual UI walkthrough against `uvicorn src.api:app`, and the complete `pytest` suite in a clean venv. No accuracy results are claimed.
+- 2026-09-19: `python -m pytest -q` from `intern-project` inside `.venv` (Python 3.11.9) — **96 passed, 0 failed, 0 errors** (42 s). Per file: `test_auth.py` 15, `test_database.py` 7, `test_decision.py` 21, `test_eval.py` 8, `test_provider.py` 2, `test_retrieval.py` 19, `test_schemas.py` 10, `test_tickets.py` 5, `test_ui_client.py` 9. Offline only: fake embedder/generator and injected `requests`-compatible transport, so no key, quota or network was used.
+- 2026-09-19: `python -m src.retrieval ingest` — reused the existing valid index (`{"chunks": 6, "dimension": 3072, "corpus_hash": "229f0a76…", "reused": true}`), which confirms the corpus-hash/chunker/model compatibility check short-circuits a paid re-embed.
+- 2026-09-19: live manual walkthrough — `python -m uvicorn src.api:app --reload` (port 8000) plus `python -m streamlit run streamlit_app.py` (port 8501); registration, sign-in, a real Gemini decision and reading the saved result back from History all succeeded in the browser.
+- 2026-09-19: `python -m pytest tests/test_auth.py tests/test_database.py -q` — 22 passed, covering the JWT rejection paths (expired, forged signature, `alg=none`, HS384, missing `sub`/`iat`/`exp`, non-numeric subject, deleted user, malformed header) and repository atomicity/rollback.
+- 2026-09-17: `python -m pytest tests/test_ui_client.py tests/test_eval.py -q` — 17 passed (offline, no keys; includes the Streamlit `AppTest` session flow and evaluator CLI paths).
+- Superseded, kept as history: the 2026-09-17 global-interpreter attempt (13 passed, 2 collection errors). Cause was an incompatible globally installed FastAPI/Starlette pairing; it does not reproduce in the virtual environment.
+- Known remaining verification gap: none of the live results above are held-out evidence. The five visible sample cases are limited end-to-end checks and `data/tickets.csv` agreement is diagnostic only.

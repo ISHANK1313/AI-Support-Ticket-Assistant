@@ -59,7 +59,7 @@ class Settings:
             kb_path = root / kb_path
         return cls(
             gemini_api_key=gemini_key,
-            gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+            gemini_model=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"),
             gemini_embedding_model=os.environ.get("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
             jwt_secret=jwt_secret,
             jwt_expire_minutes=int(os.environ.get("JWT_EXPIRE_MINUTES", "60")),
